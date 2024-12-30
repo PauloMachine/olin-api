@@ -18,6 +18,7 @@ connectDB();
 
 app.use(express.json());
 app.use(cors(corsOlin));
+app.options("*", cors(corsOlin));
 
 app.use("/v1/login", AuthRoute);
 app.use("/v1/releases", releaseRoute);
