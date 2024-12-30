@@ -12,7 +12,6 @@ import ProfileRoute from "./routes/profile.route";
 import releaseRoute from "./routes/release.route";
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 connectDB();
 app.use(express.json());
@@ -34,4 +33,4 @@ app.use("/v1/fuels", FuelRoute);
 app.use("/v1/users", UserRoute);
 app.use("/v1/profiles", ProfileRoute);
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+export default app;
