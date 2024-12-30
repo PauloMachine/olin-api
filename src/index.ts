@@ -34,4 +34,4 @@ app.use("/v1/fuels", FuelRoute);
 app.use("/v1/users", UserRoute);
 app.use("/v1/profiles", ProfileRoute);
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+export default app;
