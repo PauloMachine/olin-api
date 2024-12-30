@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 
-import { corsOlin } from "./middlewares/cors.middleware";
+import { corsOptions } from "./middlewares/cors.middleware";
 import { connectDB } from "./configs/database";
 
 import AuthRoute from "./routes/auth-route";
@@ -16,8 +16,24 @@ const PORT = process.env.PORT || 5000;
 
 connectDB();
 
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS"
+  );
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  next();
+});
+
 app.use(express.json());
-app.use(cors(corsOlin));
 
 app.use("/v1/login", AuthRoute);
 app.use("/v1/releases", releaseRoute);
