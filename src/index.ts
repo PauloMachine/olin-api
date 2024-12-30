@@ -18,17 +18,18 @@ connectDB();
 
 app.use(
   cors({
-    origin: "https://olin-web.netlify.app",
+    origin: "https://olin-web.vercel.app",
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "https://olin-web.netlify.app");
+  res.setHeader("Access-Control-Allow-Origin", "https://olin-web.vercel.app");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   next();
 });
+
 app.use(express.json());
 
 app.use("/v1/login", AuthRoute);
