@@ -1,9 +1,5 @@
 export const corsOlin = {
-  origin: [
-    "http://localhost:3000",
-    "https://olin-web.netlify.app",
-    "https://olin-web.netlify.app/",
-  ],
+  origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
