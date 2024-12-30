@@ -6,8 +6,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "nodemon src/index.ts",
-    "build": "tsc",
-    "prebuild": "yarn global add typescript"
+    "build": "tsc"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
