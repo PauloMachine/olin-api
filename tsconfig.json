@@ -8,7 +8,10 @@
     "skipLibCheck": true
   },
   "include": [
-    "src/**/*"
+    "index.ts",
+    "routes/**/*.ts",
+    "middlewares/**/*.ts",
+    "configs/**/*.ts"
   ],
   "exclude": [
     "node_modules"
