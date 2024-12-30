@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
     "target": "ESNext",
     "module": "CommonJS",
-    "outDir": "dist",
     "strict": true,
     "esModuleInterop": true
   },
   "include": [
-    "./src/index.ts"
+    "src/**/*"
   ]
 }
