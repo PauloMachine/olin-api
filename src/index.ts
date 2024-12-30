@@ -9,29 +9,16 @@ import FuelRoute from "./routes/fuel.route";
 import UserRoute from "./routes/user-route";
 import ProfileRoute from "./routes/profile.route";
 import releaseRoute from "./routes/release.route";
+import { corsOlin } from "./middlewares/cors.middleware";
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 connectDB();
 
-app.use(
-  cors({
-    origin: "*",
-    methods: "*",
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "*");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  next();
-});
-
+app.use(cors(corsOlin));
 app.options("*", cors());
-app.use(express.json());
 
+app.use(express.json());
 app.use("/v1/login", AuthRoute);
 app.use("/v1/releases", releaseRoute);
 app.use("/v1/gas-stations", GasStationRoute);
