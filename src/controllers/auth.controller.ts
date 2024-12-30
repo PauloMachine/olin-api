@@ -20,7 +20,7 @@ export class AuthController {
       return res.json({ data: loginResponse });
     } catch (error) {
       if (!res.headersSent) {
-        return res.status(500).json({ error: "Internal server error" });
+        return res.status(500).json({ error: error + "Internal server error" });
       }
     }
   }

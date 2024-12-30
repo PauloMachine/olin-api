@@ -17,16 +17,7 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 app.use(express.json());
 
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "*");
-  res.header("Access-Control-Allow-Headers", "*");
-  next();
-});
-
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
-
 app.use("/v1/login", AuthRoute);
 app.use("/v1/releases", releaseRoute);
 app.use("/v1/gas-stations", GasStationRoute);
