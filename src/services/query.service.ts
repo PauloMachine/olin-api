@@ -1,24 +1,72 @@
 import { Request } from "express";
 
 export class QueryService {
-  static async findProvider(model: any, req: Request, query: any = {}) {
+  static async findProvider(
+    model: any,
+    req: Request,
+    query: any = {},
+    sort?: any,
+    lean: boolean = false,
+    limit?: number
+  ) {
     const provider = (req as any).user?.provider;
 
     if (!provider) {
       throw new Error("Provider is required for this query");
     }
 
-    return model.find({ ...query, "provider._id": provider._id });
+    let queryBuilder = model.find({
+      ...query,
+      "provider._id": provider._id,
+    });
+
+    if (sort) {
+      queryBuilder = queryBuilder.sort(sort);
+    }
+
+    if (lean) {
+      queryBuilder = queryBuilder.lean();
+    }
+
+    if (limit) {
+      queryBuilder = queryBuilder.limit(limit);
+    }
+
+    return queryBuilder;
   }
 
-  static async findOneProvider(model: any, req: Request, query: any = {}) {
+  static async findOneProvider(
+    model: any,
+    req: Request,
+    query: any = {},
+    sort?: any,
+    lean: boolean = false,
+    limit?: any
+  ) {
     const provider = (req as any).user?.provider;
 
     if (!provider) {
       throw new Error("Provider is required for this query");
     }
 
-    return model.findOne({ ...query, "provider._id": provider._id });
+    let queryBuilder = model.findOne({
+      ...query,
+      "provider._id": provider._id,
+    });
+
+    if (sort) {
+      queryBuilder = queryBuilder.sort(sort);
+    }
+
+    if (lean) {
+      queryBuilder = queryBuilder.lean();
+    }
+
+    if (limit) {
+      queryBuilder = queryBuilder.limit(limit);
+    }
+
+    return queryBuilder;
   }
 
   static async createProvider(model: any, req: Request, data: any) {

@@ -1,13 +1,24 @@
+import { Request } from "express";
 import { Fuel } from "../models/fuel.model";
 import { GasStation } from "../models/gas-station.model";
-import { Release, ReleaseOptions } from "../models/release-model";
+import {
+  Release,
+  ReleaseOptions,
+  type IRelease,
+} from "../models/release-model";
+import { QueryService } from "./query.service";
 
 export class ReleaseService {
-  static async create(data: any) {
+  static async create(req: Request, data: any) {
     data.createdAt = new Date();
 
-    const fuel = await Fuel.findOne({ _id: data.fuel.type._id });
-    const gasStation = await GasStation.findOne({ _id: data.gasStation._id });
+    const fuel = await QueryService.findOneProvider(Fuel, req, {
+      _id: data.fuel.type._id,
+    });
+
+    const gasStation = await QueryService.findOneProvider(GasStation, req, {
+      _id: data.gasStation._id,
+    });
 
     if (!fuel || !gasStation) {
       throw new Error("Fuel or GasStation not found");
@@ -16,29 +27,48 @@ export class ReleaseService {
     data.fuel.type = fuel;
     data.gasStation = gasStation;
 
-    const lastRelease = await Release.findOne().sort({ createdAt: -1 }).lean();
+    const lastRelease = await QueryService.findOneProvider(
+      Release,
+      req,
+      {},
+      { createdAt: -1 },
+      true
+    );
+
     this.validateLastRelease(data, lastRelease);
 
     if (data.type.name === "entrada") {
       this.handleEntryRelease(data, lastRelease);
     } else if (data.type.name === "saída") {
-      await this.handleExitRelease(data, lastRelease);
+      await this.handleExitRelease(req, data, lastRelease);
     } else if (data.type.name === "fechamento") {
-      await this.handleClosureRelease(data);
+      await this.handleClosureRelease(req, data);
     } else if (data.type.name === "correção") {
-      await this.handleCorrectionRelease(data);
+      await this.handleCorrectionRelease(req, data);
     }
 
-    return await Release.create(data);
+    return await QueryService.createProvider(Release, req, data);
   }
 
-  static async find(fuelId: string, gasStationId: string, limit: number) {
+  static async find(
+    req: Request,
+    fuelId: string,
+    gasStationId: string,
+    limit: number
+  ) {
     const query: any = {};
 
     if (fuelId) query["fuel.type._id"] = fuelId;
     if (gasStationId) query["gasStation._id"] = gasStationId;
 
-    return await Release.find(query).sort({ createdAt: -1 }).limit(limit);
+    return await QueryService.findProvider(
+      Release,
+      req,
+      {},
+      { createdAt: -1 },
+      false,
+      limit
+    );
   }
 
   static async findOptions() {
@@ -66,10 +96,14 @@ export class ReleaseService {
     data.totalProfit = String(lastReleaseTotalProfit + totalProfit);
   }
 
-  static async handleExitRelease(data: any, lastRelease: any) {
-    const lastEntry = await Release.findOne({ "type.name": "entrada" })
-      .sort({ createdAt: -1 })
-      .lean();
+  static async handleExitRelease(req: Request, data: any, lastRelease: any) {
+    const lastEntry = await QueryService.findOneProvider(
+      Release,
+      req,
+      { "type.name": "entrada" },
+      { createdAt: -1 },
+      true
+    );
 
     if (!lastEntry) {
       throw new Error("No previous entry found");
@@ -91,22 +125,33 @@ export class ReleaseService {
     data.totalProfit = String(lastReleaseTotalProfit + totalProfit);
   }
 
-  static async handleClosureRelease(data: any) {
-    const lastEntry = await Release.findOne({ "type.name": "entrada" })
-      .sort({ createdAt: -1 })
-      .lean();
+  static async handleClosureRelease(req: Request, data: any) {
+    const lastEntry = await QueryService.findOneProvider(
+      Release,
+      req,
+      { "type.name": "entrada" },
+      { createdAt: -1 },
+      true
+    );
 
     if (!lastEntry) {
       throw new Error("No previous entry found");
     }
 
-    const fuelOutlets = await Release.find({
-      "type.name": "saída",
-      createdAt: { $gt: lastEntry.createdAt },
-    }).lean();
+    const fuelOutlets = await QueryService.findProvider(
+      Release,
+      req,
+      {
+        "type.name": "saída",
+        createdAt: { $gt: lastEntry.createdAt },
+      },
+      {},
+      true
+    );
 
     const totalFuelOutlets = fuelOutlets.reduce(
-      (total, fuel) => total + parseFloat(fuel?.fuel?.outlet || "0"),
+      (total: number, release: IRelease) =>
+        total + parseFloat(release?.fuel?.outlet || "0"),
       0
     );
 
@@ -117,50 +162,85 @@ export class ReleaseService {
       data.differenceFuel = String(differenceFuel);
     }
 
+    const lastEntryFuelInlet = parseFloat(lastEntry?.fuel?.inlet || "0");
+    data.totalFuel = String(lastEntryFuelInlet - data.fuel.outlet);
+
     const fuelCost = parseFloat(lastEntry?.fuel.cost || "0");
     const fuelPrice = parseFloat(lastEntry?.fuel.price || "0");
-    const lastEntryFuelInlet = parseFloat(lastEntry?.fuel?.inlet || "0");
-
-    data.totalFuel = String(lastEntryFuelInlet - data.fuel.outlet);
     data.fuel.cost = String(fuelCost);
     data.fuel.price = String(fuelPrice);
 
-    data.totalProfit = String(parseFloat(lastEntry.totalProfit || "0"));
+    const totalProfitFuelOutlets = fuelOutlets.reduce(
+      (total: number, release: IRelease) =>
+        total +
+        parseFloat(release?.fuel?.outlet || "0") *
+          parseFloat(release?.fuel?.price || "0"),
+      0
+    );
+
+    const lastEntryTotalProfit = parseFloat(lastEntry.totalProfit || "0");
+    const totalProfitFuelOutlet = parseFloat(totalProfitFuelOutlets || "0");
+    data.totalProfit = String(lastEntryTotalProfit + totalProfitFuelOutlet);
   }
 
-  static async handleCorrectionRelease(data: any) {
-    const lastClosure = await Release.findOne({
-      "type.name": "fechamento",
-    })
-      .sort({ createdAt: -1 })
-      .lean();
+  static async handleCorrectionRelease(req: Request, data: any) {
+    const lastClosure = await QueryService.findOneProvider(
+      Release,
+      req,
+      { "type.name": "fechamento" },
+      { createdAt: -1 },
+      true
+    );
 
     if (lastClosure) {
-      const lastEntry = await Release.findOne({ "type.name": "entrada" })
-        .sort({ createdAt: -1 })
-        .lean();
+      const lastEntry = await QueryService.findOneProvider(
+        Release,
+        req,
+        { "type.name": "entrada" },
+        { createdAt: -1 },
+        true
+      );
 
       if (!lastEntry) {
         throw new Error("No previous entry found");
       }
 
-      const fuelOutlets = await Release.find({
-        "type.name": "saída",
-        createdAt: { $gt: lastEntry.createdAt },
-      }).lean();
+      const fuelOutlets = await QueryService.findProvider(
+        Release,
+        req,
+        {
+          "type.name": "saída",
+          createdAt: { $gt: lastEntry.createdAt },
+        },
+        {},
+        true
+      );
 
       const totalFuelOutlets = fuelOutlets.reduce(
-        (total, fuel) => total + parseFloat(fuel?.fuel?.outlet || "0"),
+        (total: number, release: IRelease) =>
+          total + parseFloat(release?.fuel?.outlet || "0"),
         0
       );
 
-      lastClosure.fuel.outlet = String(totalFuelOutlets);
-      lastClosure.totalFuel = String(
-        parseFloat(lastEntry.totalFuel || "0") - totalFuelOutlets
-      );
-      lastClosure.type = data.type;
+      const lastEntryTotalFuel = parseFloat(lastEntry?.totalFuel || "0");
+      data.totalFuel = String(lastEntryTotalFuel - totalFuelOutlets);
 
-      data = lastClosure;
+      const fuelCost = parseFloat(lastEntry?.fuel.cost || "0");
+      const fuelPrice = parseFloat(lastEntry?.fuel.price || "0");
+      data.fuel.cost = String(fuelCost);
+      data.fuel.price = String(fuelPrice);
+
+      const totalProfitFuelOutlets = fuelOutlets.reduce(
+        (total: number, release: IRelease) =>
+          total +
+          parseFloat(release?.fuel?.outlet || "0") *
+            parseFloat(release?.fuel?.price || "0"),
+        0
+      );
+
+      const lastEntryTotalProfit = parseFloat(lastEntry.totalProfit || "0");
+      const totalProfitFuelOutlet = parseFloat(totalProfitFuelOutlets || "0");
+      data.totalProfit = String(lastEntryTotalProfit + totalProfitFuelOutlet);
     }
   }
 }

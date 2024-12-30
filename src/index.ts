@@ -26,4 +26,10 @@ app.use("/v1/fuels", FuelRoute);
 app.use("/v1/users", UserRoute);
 app.use("/v1/profiles", ProfileRoute);
 
+if (process.env.ENV === "DEV") {
+  app.listen(process.env.PORT, () => {
+    console.log(`Server running on port ${process.env.PORT}`);
+  });
+}
+
 export default app;
